@@ -1,0 +1,97 @@
+"use client";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { OrganizerShell } from "@/components/shells/OrganizerShell";
+import { api } from "@/lib/api";
+import { Plus, Code2 } from "lucide-react";
+import toast from "react-hot-toast";
+
+export default function OrganizerProblemsPage() {
+  const [problems, setProblems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get("/problems?include_private=true").then(({ data }) => { setProblems(data); setLoading(false); });
+  }, []);
+
+  const toggleVisibility = async (problemId: number, nextPublic: boolean) => {
+    try {
+      await api.put(`/problems/${problemId}/visibility?is_public=${nextPublic}`);
+      setProblems((prev) => prev.map((p) => p.id === problemId ? { ...p, is_public: nextPublic } : p));
+      toast.success(nextPublic ? "Problem moved to Public practice" : "Problem set to Contest-only");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Failed to update visibility");
+    }
+  };
+
+  return (
+    <OrganizerShell>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-white">Problems</h1>
+            <p className="text-gray-400 text-sm mt-1">Your problem bank</p>
+          </div>
+          <Link href="/organizer/problems/new"
+            className="inline-flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors">
+            <Plus className="w-4 h-4" /> New Problem
+          </Link>
+        </div>
+
+        {loading ? (
+          <div className="space-y-3">
+            {[...Array(5)].map((_, i) => <div key={i} className="h-14 bg-gray-900 border border-gray-800 rounded-xl animate-pulse" />)}
+          </div>
+        ) : problems.length === 0 ? (
+          <div className="text-center py-20 text-gray-500">
+            <Code2 className="w-12 h-12 mx-auto mb-3 opacity-20" />
+            <p>No problems yet.</p>
+            <Link href="/organizer/problems/new" className="text-violet-400 hover:text-violet-300 text-sm mt-2 inline-block">Create your first problem →</Link>
+          </div>
+        ) : (
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+            <div className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wider font-medium">
+              <span className="col-span-5">Title</span>
+              <span className="col-span-2">Difficulty</span>
+              <span className="col-span-3">Tags</span>
+              <span className="col-span-2 text-right">Actions</span>
+            </div>
+            {problems.map((p) => (
+              <div key={p.id} className="grid grid-cols-12 gap-4 px-5 py-4 border-b border-gray-800 last:border-0 items-center">
+                <span className="col-span-5 text-white font-medium text-sm">{p.title}</span>
+                <span className="col-span-2">
+                  <div className="flex gap-1.5 flex-wrap">
+                    <span className={`text-xs px-2.5 py-1 rounded-full capitalize font-medium ${
+                      p.difficulty === "easy" ? "bg-green-900/30 text-green-400" :
+                      p.difficulty === "medium" ? "bg-yellow-900/30 text-yellow-400" : "bg-red-900/30 text-red-400"
+                    }`}>{p.difficulty}</span>
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                      p.is_public ? "bg-blue-900/30 text-blue-300" : "bg-gray-800 text-gray-400"
+                    }`}>{p.is_public ? "Public" : "Contest"}</span>
+                  </div>
+                </span>
+                <span className="col-span-3 flex gap-1 flex-wrap">
+                  {(p.tags || []).slice(0, 3).map((tag: string) => (
+                    <span key={tag} className="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded">{tag}</span>
+                  ))}
+                </span>
+                <span className="col-span-2 flex justify-end gap-2">
+                  <button
+                    onClick={() => toggleVisibility(p.id, !p.is_public)}
+                    className="text-xs text-gray-300 hover:text-white px-3 py-1.5 bg-gray-800 rounded-lg transition-colors"
+                  >
+                    {p.is_public ? "Make Contest" : "Make Public"}
+                  </button>
+                  <Link href={`/candidate/ide/${p.id}`} target="_blank"
+                    className="text-xs text-gray-400 hover:text-white px-3 py-1.5 bg-gray-800 rounded-lg transition-colors">Preview</Link>
+                  <Link href={`/organizer/problems/${p.id}`}
+                    className="text-xs text-gray-400 hover:text-white px-3 py-1.5 bg-gray-800 rounded-lg transition-colors">Edit</Link>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </OrganizerShell>
+  );
+}
