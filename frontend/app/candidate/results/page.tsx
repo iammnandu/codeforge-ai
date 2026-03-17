@@ -58,20 +58,30 @@ export default function CandidateResultsPage() {
           </div>
         ) : (
           <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
-            <div className="grid grid-cols-4 gap-4 px-5 py-3 border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wider font-medium">
+            <div className="grid grid-cols-5 gap-4 px-5 py-3 border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wider font-medium">
               <span>Contest</span>
               <span>Rank</span>
               <span>Score</span>
+              <span>Status</span>
               <span className="text-right">Action</span>
             </div>
             {results.map((row) => (
-              <div key={row.contest_id} className="grid grid-cols-4 gap-4 px-5 py-4 border-b border-gray-800 last:border-0 items-center">
+              <div key={row.contest_id} className="grid grid-cols-5 gap-4 px-5 py-4 border-b border-gray-800 last:border-0 items-center">
                 <div className="flex items-center gap-2 text-white font-medium">
                   <Trophy className="w-4 h-4 text-violet-400" />
                   <span>{row.title}</span>
                 </div>
                 <span className="text-yellow-400 font-semibold">{row.rank ? `#${row.rank}` : "-"}</span>
                 <span className="text-white font-semibold">{Math.round(row.score || 0)}</span>
+                <span className="text-xs">
+                  {row.malpractice_failed ? (
+                    <span className="px-2 py-1 rounded-full bg-red-900/30 text-red-300 border border-red-900/40">Malpractice Failed</span>
+                  ) : row.malpractice_flagged ? (
+                    <span className="px-2 py-1 rounded-full bg-yellow-900/30 text-yellow-300 border border-yellow-900/40">Flagged</span>
+                  ) : (
+                    <span className="px-2 py-1 rounded-full bg-green-900/30 text-green-300 border border-green-900/40">Clean</span>
+                  )}
+                </span>
                 <div className="text-right">
                   <Link href={`/candidate/contest/${row.contest_id}/results`}
                     className="text-sm text-violet-400 hover:text-violet-300 transition-colors">

@@ -97,6 +97,47 @@ def _get_or_create_attempt(db: Session, contest_id: int, user_id: int) -> Contes
     return attempt
 
 
+def _get_malpractice_status(db: Session, contest_id: int, user_id: int):
+    sessions = (
+        db.query(MonitoringSession)
+        .filter(
+            MonitoringSession.contest_id == contest_id,
+            MonitoringSession.user_id == user_id,
+        )
+        .order_by(MonitoringSession.started_at.desc())
+        .all()
+    )
+    if not sessions:
+        return {
+            "malpractice_failed": False,
+            "malpractice_flagged": False,
+            "malpractice_reason": None,
+        }
+
+    failed = any(session.is_flagged for session in sessions)
+    flagged = failed or any((session.suspicion_score or 0) >= 70 for session in sessions)
+
+    session_ids = [session.id for session in sessions]
+    latest_event = None
+    if session_ids:
+        latest_event = (
+            db.query(MonitoringEvent)
+            .filter(MonitoringEvent.session_id.in_(session_ids))
+            .order_by(MonitoringEvent.timestamp.desc())
+            .first()
+        )
+
+    reason = None
+    if latest_event:
+        reason = (latest_event.event_type or "").replace("_", " ") or None
+
+    return {
+        "malpractice_failed": failed,
+        "malpractice_flagged": flagged,
+        "malpractice_reason": reason,
+    }
+
+
 @router.post("/", response_model=ContestOut, status_code=201)
 def create_contest(
     payload: ContestCreate,
@@ -420,6 +461,7 @@ def contest_results(
             "rank": participant.rank,
             "joined_at": participant.joined_at,
             "solved": by_user.get(participant.user_id, {}).get("solved", 0),
+            **_get_malpractice_status(db, contest_id, participant.user_id),
         }
         for participant, user in participants
     ]
@@ -565,6 +607,7 @@ def my_results_dashboard(
             "submitted": bool(attempt and attempt.is_submitted),
             "feedback_rating": attempt.feedback_rating if attempt else None,
             "ended_at": contest.end_time,
+            **_get_malpractice_status(db, contest.id, candidate.id),
         })
 
     rows.sort(key=lambda row: _as_naive(row["ended_at"]), reverse=True)

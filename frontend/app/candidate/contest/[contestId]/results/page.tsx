@@ -4,12 +4,14 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { CandidateShell } from "@/components/shells/CandidateShell";
 import { api } from "@/lib/api";
+import { useAuthStore } from "@/lib/store";
 import { Clock } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function CandidateContestResultPage() {
   const { contestId } = useParams();
   const router = useRouter();
+  const userId = useAuthStore((s) => s.userId);
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -48,6 +50,8 @@ export default function CandidateContestResultPage() {
     );
   }
 
+  const myRow = rows.find((row: any) => row.user_id === userId);
+
   return (
     <CandidateShell>
       <div className="max-w-3xl mx-auto space-y-6">
@@ -69,6 +73,17 @@ export default function CandidateContestResultPage() {
             </Link>
           </div>
         </div>
+
+        {myRow && (myRow.malpractice_failed || myRow.malpractice_flagged) && (
+          <div className={`rounded-xl border px-4 py-3 text-sm ${
+            myRow.malpractice_failed
+              ? "bg-red-900/20 border-red-900/40 text-red-300"
+              : "bg-yellow-900/20 border-yellow-900/40 text-yellow-300"
+          }`}>
+            {myRow.malpractice_failed ? "Malpractice failed" : "Malpractice flagged"}
+            {myRow.malpractice_reason ? `: ${myRow.malpractice_reason}` : " during this contest."}
+          </div>
+        )}
 
         <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
           <div className="grid grid-cols-5 gap-4 px-5 py-3 border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wider font-medium">
