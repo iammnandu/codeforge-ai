@@ -10,6 +10,7 @@ export default function OrganizerProblemsPage() {
   const [problems, setProblems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const tableGridClass = "grid grid-cols-[minmax(260px,3fr)_minmax(190px,2fr)_minmax(200px,2fr)_340px] gap-4 px-5";
 
   useEffect(() => {
     api.get("/problems?include_private=true").then(({ data }) => { setProblems(data); setLoading(false); });
@@ -65,17 +66,18 @@ export default function OrganizerProblemsPage() {
             <Link href="/organizer/problems/new" className="text-violet-400 hover:text-violet-300 text-sm mt-2 inline-block">Create your first problem →</Link>
           </div>
         ) : (
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
-            <div className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wider font-medium">
-              <span className="col-span-5">Title</span>
-              <span className="col-span-2">Difficulty</span>
-              <span className="col-span-3">Tags</span>
-              <span className="col-span-2 text-right">Actions</span>
-            </div>
-            {problems.map((p) => (
-              <div key={p.id} className="grid grid-cols-12 gap-4 px-5 py-4 border-b border-gray-800 last:border-0 items-center">
-                <span className="col-span-5 text-white font-medium text-sm">{p.title}</span>
-                <span className="col-span-2">
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-x-auto">
+            <div className="min-w-[1080px]">
+              <div className={`${tableGridClass} py-3 border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wider font-medium`}>
+                <span>Title</span>
+                <span>Difficulty</span>
+                <span>Tags</span>
+                <span className="text-right">Actions</span>
+              </div>
+              {problems.map((p) => (
+              <div key={p.id} className={`${tableGridClass} py-4 border-b border-gray-800 last:border-0 items-start`}>
+                <span className="min-w-0 text-white font-medium text-sm truncate">{p.title}</span>
+                <span className="min-w-0">
                   <div className="flex gap-1.5 flex-wrap">
                     <span className={`text-xs px-2.5 py-1 rounded-full capitalize font-medium ${
                       p.difficulty === "easy" ? "bg-green-900/30 text-green-400" :
@@ -86,12 +88,14 @@ export default function OrganizerProblemsPage() {
                     }`}>{p.is_public ? "Public" : "Contest"}</span>
                   </div>
                 </span>
-                <span className="col-span-3 flex gap-1 flex-wrap">
-                  {(p.tags || []).slice(0, 3).map((tag: string) => (
-                    <span key={tag} className="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded">{tag}</span>
-                  ))}
+                <span className="min-w-0">
+                  <span className="flex gap-1 flex-wrap max-w-full">
+                    {(p.tags || []).slice(0, 3).map((tag: string) => (
+                      <span key={tag} className="max-w-[120px] truncate text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded">{tag}</span>
+                    ))}
+                  </span>
                 </span>
-                <span className="col-span-2 flex justify-end gap-2">
+                <span className="flex justify-end gap-2 flex-nowrap shrink-0">
                   <button
                     onClick={() => toggleVisibility(p.id, !p.is_public)}
                     className="text-xs text-gray-300 hover:text-white px-3 py-1.5 bg-gray-800 rounded-lg transition-colors"
@@ -113,6 +117,7 @@ export default function OrganizerProblemsPage() {
                 </span>
               </div>
             ))}
+            </div>
           </div>
         )}
       </div>
