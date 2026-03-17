@@ -17,6 +17,7 @@ export default function LoginPage() {
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const googleBtnRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -52,6 +53,7 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     setLoading(true);
     try {
       const form = new URLSearchParams();
@@ -64,7 +66,9 @@ export default function LoginPage() {
       toast.success("Welcome back!");
       router.push(data.role === "organizer" ? "/organizer/dashboard" : "/candidate/dashboard");
     } catch (err: any) {
-      toast.error(err.response?.data?.detail || "Login failed");
+      const message = err.response?.data?.detail || "Login failed";
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -82,6 +86,11 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="bg-gray-900 border border-gray-800 rounded-2xl p-8 space-y-5">
+          {error && (
+            <div className="rounded-xl border border-red-500/50 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+              {error}
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1.5">Email</label>
             <input

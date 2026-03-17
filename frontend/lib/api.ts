@@ -26,7 +26,9 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401 && typeof window !== "undefined") {
+    const isAuthRoute = err.config?.url?.includes("/auth/login") || err.config?.url?.includes("/auth/google");
+    if (err.response?.status === 401 && typeof window !== "undefined" && !isAuthRoute) {
+      // Only force-redirect on expired sessions; let login failures surface in place
       localStorage.removeItem(AUTH_KEY);
       localStorage.removeItem(LEGACY_AUTH_KEY);
       window.location.href = "/login";
