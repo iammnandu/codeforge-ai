@@ -530,35 +530,44 @@ def my_results_dashboard(
     db: Session = Depends(get_db),
     candidate: User = Depends(require_candidate),
 ):
-    attempts = (
-        db.query(ContestAttempt)
-        .filter(ContestAttempt.user_id == candidate.id)
-        .order_by(ContestAttempt.created_at.desc())
+    participants = (
+        db.query(ContestParticipant)
+        .filter(ContestParticipant.user_id == candidate.id)
+        .order_by(ContestParticipant.joined_at.desc())
         .all()
     )
 
+    attempt_by_contest = {
+        attempt.contest_id: attempt
+        for attempt in db.query(ContestAttempt).filter(ContestAttempt.user_id == candidate.id).all()
+    }
+
     rows = []
-    for attempt in attempts:
-        contest = db.query(Contest).filter(Contest.id == attempt.contest_id).first()
+    for participant in participants:
+        contest = db.query(Contest).filter(Contest.id == participant.contest_id).first()
         if not contest:
             continue
+
         contest_ended = _utc_now_naive() >= _as_naive(contest.end_time)
         if not contest_ended:
             continue
 
-        participant = db.query(ContestParticipant).filter_by(
-            contest_id=attempt.contest_id,
-            user_id=candidate.id,
-        ).first()
+        _compute_and_store_results(db, contest.id)
+        db.refresh(participant)
+
+        attempt = attempt_by_contest.get(contest.id)
         rows.append({
             "contest_id": contest.id,
             "title": contest.title,
             "score": participant.score if participant else 0,
             "rank": participant.rank if participant else None,
-            "submitted_at": attempt.submitted_at,
-            "feedback_rating": attempt.feedback_rating,
+            "submitted_at": attempt.submitted_at if attempt else None,
+            "submitted": bool(attempt and attempt.is_submitted),
+            "feedback_rating": attempt.feedback_rating if attempt else None,
+            "ended_at": contest.end_time,
         })
 
+    rows.sort(key=lambda row: _as_naive(row["ended_at"]), reverse=True)
     return rows
 
 
