@@ -19,6 +19,17 @@ export default function CandidateDashboard() {
     api.get("/contests/results/my").then(({ data }) => setResults(data)).catch(() => {});
   }, []);
 
+  const now = Date.now();
+  const liveContests = contests.filter((contest) => {
+    const endMs = contest?.end_time ? new Date(contest.end_time).getTime() : 0;
+    return !endMs || endMs > now;
+  });
+  const endedContests = contests.filter((contest) => {
+    const endMs = contest?.end_time ? new Date(contest.end_time).getTime() : 0;
+    return !!endMs && endMs <= now;
+  });
+
+
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
     setJoining(true);
@@ -58,7 +69,7 @@ export default function CandidateDashboard() {
         </div>
 
         {/* Active contests */}
-        {contests.length > 0 && (
+        {liveContests.length > 0 && (
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-white flex items-center gap-2">
@@ -66,7 +77,7 @@ export default function CandidateDashboard() {
               </h2>
             </div>
             <div className="grid md:grid-cols-2 gap-4">
-              {contests.map((c) => (
+              {liveContests.map((c) => (
                 <Link key={c.id} href={`/candidate/contest/${c.id}`}
                   className="bg-gray-900 border border-gray-800 hover:border-gray-600 rounded-xl p-5 transition-all group">
                   <div className="flex items-start justify-between mb-3">
@@ -81,6 +92,33 @@ export default function CandidateDashboard() {
                   </div>
                   <div className="mt-3 text-xs text-violet-400 flex items-center gap-1">
                     Enter contest <ArrowRight className="w-3 h-3" />
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {endedContests.length > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                <Trophy className="w-5 h-5 text-gray-400" /> Ended Contests
+              </h2>
+            </div>
+            <div className="grid md:grid-cols-2 gap-4">
+              {endedContests.map((c) => (
+                <Link key={c.id} href={`/candidate/contest/${c.id}/results`}
+                  className="bg-gray-900 border border-gray-800 hover:border-gray-700 rounded-xl p-5 transition-all group">
+                  <div className="flex items-start justify-between mb-3">
+                    <h3 className="font-semibold text-white group-hover:text-violet-300 transition-colors">{c.title}</h3>
+                    <span className="text-xs bg-gray-800 text-gray-300 px-2 py-0.5 rounded-full">Ended</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-gray-500">
+                    <span>{format(new Date(c.end_time), "d MMM, HH:mm")}</span>
+                  </div>
+                  <div className="mt-3 text-xs text-violet-400 flex items-center gap-1">
+                    View results <ArrowRight className="w-3 h-3" />
                   </div>
                 </Link>
               ))}

@@ -78,13 +78,17 @@ def _enforcement_action(session_id: int, flags: List[str], score: float):
         "extra_monitor_detected",
     }
     has_critical = any(flag in critical_set for flag in flags)
-    state = violation_state.setdefault(session_id, {"critical": 0, "multiple_faces": 0})
+    state = violation_state.setdefault(session_id, {"critical": 0, "multiple_faces": 0, "multi_signal": 0})
 
     if "multiple_faces" in flags:
         state["multiple_faces"] += 1
 
     if has_critical:
         state["critical"] += 1
+
+    distinct_flags = len(set(flags or []))
+    if distinct_flags >= 2:
+        state["multi_signal"] += 1
 
     if state["multiple_faces"] >= 2:
         return {
@@ -95,6 +99,22 @@ def _enforcement_action(session_id: int, flags: List[str], score: float):
         return {
             "action": "pause",
             "message": "Multiple people detected in camera. This is malpractice. Contest is paused immediately.",
+        }
+
+    if state["multi_signal"] >= 3:
+        return {
+            "action": "disqualify",
+            "message": "Repeated multiple malpractice signals detected. You are disqualified from this contest.",
+        }
+    if state["multi_signal"] >= 2:
+        return {
+            "action": "pause",
+            "message": "Multiple malpractice signals detected again. Contest is paused.",
+        }
+    if state["multi_signal"] >= 1:
+        return {
+            "action": "warning",
+            "message": "Malpractice signals detected (multiple checks failed). Please correct immediately.",
         }
 
     if score >= 90 or state["critical"] >= 3:

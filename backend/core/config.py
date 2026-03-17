@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     MAIL_SSL_TLS: bool = False
 
     FRONTEND_URL: str = "http://localhost:3000"
+    GOOGLE_CLIENT_ID: str = ""
 
     CV_FRAME_SKIP: int = 3
     CV_SUSPICION_THRESHOLD: int = 70

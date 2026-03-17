@@ -60,7 +60,7 @@ LANDMARK_INDICES = [1, 152, 226, 446, 57, 287]
 
 # Gaze thresholds (degrees)
 YAW_THRESHOLD   = 20.0   # > 20° turn = looking away sideways
-PITCH_THRESHOLD = 15.0   # < -15° pitch = looking down (phone on desk)
+PITCH_THRESHOLD = 22.0   # < -22° pitch = likely desk/phone look (less strict for normal typing)
 
 
 class GazeAgent:
@@ -148,7 +148,7 @@ class GazeAgent:
         if pitch < -PITCH_THRESHOLD:
             # Pitching down = looking at desk/phone below frame
             result.flags.append("gaze_down")
-            result.score_delta += min(abs(pitch) - PITCH_THRESHOLD, 25.0) * 0.6
+            result.score_delta += min(abs(pitch) - PITCH_THRESHOLD, 12.0) * 0.25
             logger.debug(f"[GazeAgent] Downward pitch detected: {pitch:.1f}°")
 
         # Temporal smoothing — flag as "looking away" only if sustained
@@ -160,7 +160,7 @@ class GazeAgent:
             result.looking_away = True
             if "sustained_gaze_away" not in result.flags:
                 result.flags.append("sustained_gaze_away")
-                result.score_delta += 10.0
+                result.score_delta += 4.0
 
         return result
 

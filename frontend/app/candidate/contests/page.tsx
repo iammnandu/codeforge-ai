@@ -39,6 +39,8 @@ export default function CandidateContestsPage() {
           <div className="space-y-4">
             {contests.map((c) => {
               const status = getStatus(c);
+              const isEnded = status.label === "Ended";
+              const isUpcoming = status.label === "Upcoming";
               return (
                 <div key={c.id} className="bg-gray-900 border border-gray-800 hover:border-gray-700 rounded-2xl p-6 transition-colors">
                   <div className="flex items-start justify-between">
@@ -67,10 +69,21 @@ export default function CandidateContestsPage() {
                         </span>
                       </div>
                     </div>
-                    <Link href={`/candidate/contest/${c.id}`}
-                      className="ml-6 flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors flex-shrink-0">
-                      Enter <ArrowRight className="w-4 h-4" />
-                    </Link>
+                    {isEnded ? (
+                      <Link href={`/candidate/contest/${c.id}/results`}
+                        className="ml-6 flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-gray-200 text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors flex-shrink-0">
+                        View Results <ArrowRight className="w-4 h-4" />
+                      </Link>
+                    ) : isUpcoming ? (
+                      <span className="ml-6 inline-flex items-center gap-2 bg-blue-900/20 border border-blue-900/40 text-blue-300 text-sm font-semibold px-5 py-2.5 rounded-xl flex-shrink-0">
+                        Starts Soon
+                      </span>
+                    ) : (
+                      <Link href={`/candidate/contest/${c.id}`}
+                        className="ml-6 flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors flex-shrink-0">
+                        Enter <ArrowRight className="w-4 h-4" />
+                      </Link>
+                    )}
                   </div>
                 </div>
               );

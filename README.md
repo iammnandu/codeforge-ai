@@ -115,6 +115,7 @@ SECRET_KEY=replace-with-random-secret
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=60
 FRONTEND_URL=http://localhost:3000
+GOOGLE_CLIENT_ID=your-google-web-client-id
 ```
 
 Optional SMTP settings are already in `.env.example`.
@@ -130,6 +131,21 @@ cp .env.local.example .env.local
 `frontend` uses:
 
 - `NEXT_PUBLIC_API_URL` (default: `http://localhost:8000/api`)
+- `NEXT_PUBLIC_GOOGLE_CLIENT_ID` (Google OAuth Web Client ID)
+
+### 4) Google OAuth setup (optional)
+
+To enable Google Sign-In/Sign-Up on `/login` and `/signup`:
+
+1. Open Google Cloud Console → APIs & Services → Credentials.
+2. Create an **OAuth 2.0 Client ID** of type **Web application**.
+3. Add authorized JavaScript origin(s):
+   - `http://localhost:3000` (local)
+4. Copy the Client ID and set:
+   - `backend/.env` → `GOOGLE_CLIENT_ID=...`
+   - `frontend/.env.local` → `NEXT_PUBLIC_GOOGLE_CLIENT_ID=...`
+
+No backend callback URL is required in this flow because frontend sends Google ID token to backend for verification.
 
 ## Run the Platform
 
@@ -185,6 +201,7 @@ Base URL: `http://localhost:8000/api`
 
 - `POST /auth/signup`
 - `POST /auth/login`
+- `POST /auth/google`
 - `GET /auth/me`
 
 ### Users

@@ -14,20 +14,40 @@ export default function CandidateContestSubmittedPage() {
   const [rating, setRating] = useState(5);
   const [feedbackText, setFeedbackText] = useState("");
   const [sendingFeedback, setSendingFeedback] = useState(false);
+  const [checkingResults, setCheckingResults] = useState(true);
 
   useEffect(() => {
-    const interval = setInterval(() => {
+    const poll = setInterval(async () => {
+      try {
+        const { data } = await api.get(`/contests/${contestId}`);
+        const ended = data?.end_time ? new Date(data.end_time).getTime() <= Date.now() : false;
+        if (ended) {
+          clearInterval(poll);
+          router.push(`/candidate/contest/${contestId}/results`);
+        }
+      } catch {}
+    }, 4000);
+
+    const fallbackCountdown = setInterval(() => {
       setSeconds((s) => {
         if (s <= 1) {
-          clearInterval(interval);
+          clearInterval(fallbackCountdown);
+          clearInterval(poll);
           router.push("/candidate/dashboard");
           return 0;
         }
         return s - 1;
       });
     }, 1000);
-    return () => clearInterval(interval);
-  }, [router]);
+
+    const loadingDone = setTimeout(() => setCheckingResults(false), 1200);
+
+    return () => {
+      clearTimeout(loadingDone);
+      clearInterval(poll);
+      clearInterval(fallbackCountdown);
+    };
+  }, [contestId, router]);
 
   const submitFeedback = async () => {
     setSendingFeedback(true);
@@ -47,7 +67,11 @@ export default function CandidateContestSubmittedPage() {
         <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 text-center space-y-4">
           <CheckCircle2 className="w-14 h-14 text-green-400 mx-auto" />
           <h1 className="text-2xl font-bold text-white">Submitted Successfully</h1>
-          <p className="text-gray-400 text-sm">Thank you. Your contest submission is saved.</p>
+          <p className="text-gray-400 text-sm">
+            {checkingResults
+              ? "Checking contest status..."
+              : "Thank you. Your contest submission is saved."}
+          </p>
 
           <div className="text-xs text-gray-500 flex items-center justify-center gap-1.5 pt-1">
             <Clock className="w-3.5 h-3.5" /> Redirecting to dashboard in {seconds}s

@@ -153,6 +153,8 @@ def join_contest(
         raise HTTPException(status_code=404, detail="Invalid contest code")
     if not contest.is_published:
         raise HTTPException(status_code=403, detail="Contest is not open yet")
+    if _utc_now_naive() >= _as_naive(contest.end_time):
+        raise HTTPException(status_code=403, detail="Contest has already ended")
 
     already = db.query(ContestParticipant).filter_by(
         contest_id=contest.id, user_id=current_user.id

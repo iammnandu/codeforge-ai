@@ -30,28 +30,29 @@ export function EnvironmentScan({ videoRef, wsRef, onComplete }: Props) {
   const [timeLeft, setTimeLeft] = useState(SCAN_DURATION);
   const [detections, setDetections] = useState<string[]>([]);
   const [violations, setViolations] = useState<string[]>([]);
-  const [stream, setStream] = useState<MediaStream | null>(null);
-    const [scanResponses, setScanResponses] = useState(0);
+  const [scanResponses, setScanResponses] = useState(0);
   const intervalRef = useRef<any>(null);
   const frameIntervalRef = useRef<any>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
 
-  // Set up local video when stream is available
-  useEffect(() => {
-    if (stream && localVideoRef.current) {
-      localVideoRef.current.srcObject = stream;
-      localVideoRef.current.play().catch(err => console.error("Video play error:", err));
+  const attachPreviewStream = () => {
+    const srcStream = videoRef.current?.srcObject as MediaStream | null;
+    if (!srcStream || !localVideoRef.current) return;
+    const hasLiveTrack = srcStream.getVideoTracks().some((t) => t.readyState === "live");
+    if (!hasLiveTrack) return;
+    if (localVideoRef.current.srcObject !== srcStream) {
+      localVideoRef.current.srcObject = srcStream;
     }
-  }, [stream]);
+    localVideoRef.current.play().catch(() => undefined);
+  };
 
-  // Get stream from parent when scanning starts
+  // Re-attach stream whenever scan view is shown again (retake case)
   useEffect(() => {
-    if (phase === "scanning" && videoRef.current && videoRef.current.srcObject) {
-      const mediaStream = videoRef.current.srcObject as MediaStream;
-      console.log("EnvironmentScan: Got stream from parent", mediaStream.getTracks());
-      setStream(mediaStream);
-    }
+    if (phase !== "scanning") return;
+    attachPreviewStream();
+    const reattachTimer = setInterval(attachPreviewStream, 400);
+    return () => clearInterval(reattachTimer);
   }, [phase, videoRef]);
 
   const startScan = () => {
@@ -62,6 +63,7 @@ export function EnvironmentScan({ videoRef, wsRef, onComplete }: Props) {
     setDetections([]);
     setViolations([]);
     setScanResponses(0);
+    attachPreviewStream();
 
     // Countdown
     intervalRef.current = setInterval(() => {
@@ -158,6 +160,7 @@ export function EnvironmentScan({ videoRef, wsRef, onComplete }: Props) {
             muted
             playsInline
             className="w-full h-full object-cover"
+            onLoadedMetadata={attachPreviewStream}
           />
           <div className="absolute top-3 left-3 bg-red-500 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
             <div className="w-2 h-2 bg-white rounded-full animate-pulse" />

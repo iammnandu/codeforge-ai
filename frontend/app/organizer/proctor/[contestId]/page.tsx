@@ -4,6 +4,8 @@ import { useParams } from "next/navigation";
 import { Shield, AlertTriangle, Users, Activity } from "lucide-react";
 import { OrganizerShell } from "@/components/shells/OrganizerShell";
 import { useAuthStore } from "@/lib/store";
+import Link from "next/link";
+import { api } from "@/lib/api";
 
 interface CandidateState {
   session_id: number;
@@ -31,7 +33,19 @@ export default function ProctorDashboard() {
   const [candidates, setCandidates] = useState<Record<number, CandidateState>>({});
   const [connected, setConnected] = useState(false);
   const [alerts, setAlerts] = useState<string[]>([]);
+  const [contestEnded, setContestEnded] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
+  const contestPollRef = useRef<any>(null);
+
+  const pushOrganizerNotification = (text: string, href: string) => {
+    if (typeof window === "undefined") return;
+    try {
+      const key = "cf_notifications_organizer";
+      const current = JSON.parse(localStorage.getItem(key) || "[]");
+      const next = [{ id: `org-${Date.now()}`, text, href }, ...current].slice(0, 10);
+      localStorage.setItem(key, JSON.stringify(next));
+    } catch {}
+  };
 
   useEffect(() => {
     const ws = new WebSocket(
@@ -55,6 +69,10 @@ export default function ProctorDashboard() {
         if (msg.should_alert) {
           const alertMsg = `⚠ ${msg.username}: ${msg.flags.join(", ")}`;
           setAlerts((a) => [alertMsg, ...a.slice(0, 19)]);
+          pushOrganizerNotification(
+            `Malpractice alert: ${msg.username} (${(msg.flags || []).join(", ") || "rule violation"})`,
+            `/organizer/proctor/${contestId}`
+          );
         }
       }
     };
@@ -62,12 +80,47 @@ export default function ProctorDashboard() {
     return () => ws.close();
   }, [contestId, token]);
 
+  useEffect(() => {
+    contestPollRef.current = setInterval(async () => {
+      try {
+        const { data } = await api.get(`/contests/${contestId}`);
+        const ended = data?.end_time ? new Date(data.end_time).getTime() <= Date.now() : false;
+        if (ended) setContestEnded(true);
+      } catch {}
+    }, 5000);
+    return () => clearInterval(contestPollRef.current);
+  }, [contestId]);
+
   const candidateList = Object.values(candidates).sort((a, b) => b.suspicion_score - a.suspicion_score);
   const flagged = candidateList.filter((c) => c.suspicion_score >= 70).length;
 
   return (
     <OrganizerShell>
       <div className="space-y-6">
+        {contestEnded && (
+          <div className="fixed inset-0 z-40 bg-gray-950/95 flex items-center justify-center px-6">
+            <div className="max-w-lg w-full bg-gray-900 border border-violet-800/40 rounded-2xl p-8 text-center space-y-4">
+              <AlertTriangle className="w-12 h-12 text-violet-400 mx-auto" />
+              <h2 className="text-2xl font-bold text-white">Contest Ended</h2>
+              <p className="text-sm text-gray-400">This contest has ended. Live proctoring is closed.</p>
+              <div className="flex items-center justify-center gap-3">
+                <Link
+                  href={`/organizer/contests/${contestId}/results`}
+                  className="px-4 py-2 bg-violet-600 hover:bg-violet-500 rounded-lg text-white text-sm font-medium"
+                >
+                  Go to Results
+                </Link>
+                <Link
+                  href="/organizer/dashboard"
+                  className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-gray-300 text-sm font-medium"
+                >
+                  Go to Dashboard
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">

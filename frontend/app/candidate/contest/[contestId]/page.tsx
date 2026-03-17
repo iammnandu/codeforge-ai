@@ -25,6 +25,11 @@ export default function ContestEntryPage() {
   useEffect(() => {
     api.get(`/contests/${contestId}`).then(({ data }) => {
       setContest(data);
+      const ended = data?.end_time ? new Date(data.end_time).getTime() <= Date.now() : false;
+      if (ended) {
+        router.replace(`/candidate/contest/${contestId}/results`);
+        return;
+      }
       setPhase("info");
     });
     return () => {
@@ -34,6 +39,10 @@ export default function ContestEntryPage() {
   }, [contestId]);
 
   const startCamera = async () => {
+    if (contest?.end_time && new Date(contest.end_time).getTime() <= Date.now()) {
+      router.replace(`/candidate/contest/${contestId}/results`);
+      return;
+    }
     setPhase("camera");
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });

@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, Trophy, Code2, Eye, Settings, LogOut, Users } from "lucide-react";
 import { useAuthStore } from "@/lib/store";
 import { BrandLogo } from "@/components/branding/BrandLogo";
+import { TopNotifications } from "@/components/notifications/TopNotifications";
 
 const NAV = [
   { href: "/organizer/dashboard", icon: <LayoutDashboard className="w-4 h-4" />, label: "Dashboard" },
@@ -48,7 +49,12 @@ export function OrganizerShell({ children }: { children: React.ReactNode }) {
       </aside>
       {/* Main content */}
       <main className="flex-1 overflow-y-auto">
-        <div className="max-w-6xl mx-auto px-8 py-8">{children}</div>
+        <div className="max-w-6xl mx-auto px-8 py-6">
+          <div className="flex justify-end mb-4">
+            <TopNotifications role="organizer" />
+          </div>
+          {children}
+        </div>
       </main>
     </div>
   );

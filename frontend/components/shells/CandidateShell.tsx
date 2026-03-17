@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, BookOpen, Trophy, BarChart3, Settings, LogOut } from "lucide-react";
 import { useAuthStore } from "@/lib/store";
 import { BrandLogo } from "@/components/branding/BrandLogo";
+import { TopNotifications } from "@/components/notifications/TopNotifications";
 
 const NAV = [
   { href: "/candidate/dashboard", icon: <LayoutDashboard className="w-4 h-4" />, label: "Dashboard" },
@@ -47,7 +48,12 @@ export function CandidateShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
       <main className="flex-1 overflow-y-auto">
-        <div className="max-w-6xl mx-auto px-8 py-8">{children}</div>
+        <div className="max-w-6xl mx-auto px-8 py-6">
+          <div className="flex justify-end mb-4">
+            <TopNotifications role="candidate" />
+          </div>
+          {children}
+        </div>
       </main>
     </div>
   );

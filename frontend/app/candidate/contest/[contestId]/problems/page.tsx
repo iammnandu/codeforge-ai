@@ -43,7 +43,10 @@ export default function ContestProblemsPage() {
       await api.post(`/contests/${contestId}/finish`);
       setSubmitted(true);
       toast.success("Contest submitted successfully");
-      window.location.href = `/candidate/contest/${contestId}/submitted`;
+      const endedNow = (timeLeft ?? 0) <= 0;
+      window.location.href = endedNow
+        ? `/candidate/contest/${contestId}/results`
+        : `/candidate/contest/${contestId}/submitted`;
     } catch (error: any) {
       toast.error(error?.response?.data?.detail || "Failed to submit contest");
     } finally {
@@ -55,7 +58,7 @@ export default function ContestProblemsPage() {
     if (timeLeft !== 0) return;
     if (autoSubmitRef.current) return;
     autoSubmitRef.current = true;
-    toast.success("Time limit reached. Submitting your contest...");
+    toast.success("Time limit reached. Submitting and opening results...");
     finishContest();
   }, [timeLeft]);
 

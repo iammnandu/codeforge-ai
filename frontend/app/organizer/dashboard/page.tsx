@@ -27,6 +27,7 @@ export default function OrganizerDashboard() {
     { label: "Proctored",  value: contests.filter((c) => c.proctoring_enabled).length, icon: <Eye className="w-5 h-5 text-blue-400" /> },
   ];
 
+
   return (
     <OrganizerShell>
       <div className="space-y-8">

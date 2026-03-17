@@ -51,6 +51,8 @@ export default function IDEPage() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [contestPaused, setContestPaused] = useState(false);
   const [disqualified, setDisqualified] = useState(false);
+  const [contestEnded, setContestEnded] = useState(false);
+  const [endMessage, setEndMessage] = useState("");
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
@@ -59,6 +61,17 @@ export default function IDEPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const frameIntervalRef = useRef<any>(null);
   const reconnectRef = useRef<any>(null);
+  const contestWatcherRef = useRef<any>(null);
+
+  const pushCandidateNotification = (text: string, href: string) => {
+    if (typeof window === "undefined") return;
+    try {
+      const key = "cf_notifications_candidate";
+      const current = JSON.parse(localStorage.getItem(key) || "[]");
+      const next = [{ id: `cand-${Date.now()}`, text, href }, ...current].slice(0, 10);
+      localStorage.setItem(key, JSON.stringify(next));
+    } catch {}
+  };
 
   useEffect(() => {
     api.get(`/problems/${problemId}`).then(({ data }) => setProblem(data));
@@ -69,8 +82,32 @@ export default function IDEPage() {
       wsRef.current?.close();
       clearInterval(frameIntervalRef.current);
       clearTimeout(reconnectRef.current);
+      clearInterval(contestWatcherRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (!contestId) return;
+    contestWatcherRef.current = setInterval(async () => {
+      try {
+        const { data } = await api.get(`/contests/${contestId}`);
+        const ended = data?.end_time ? new Date(data.end_time).getTime() <= Date.now() : false;
+        if (ended) {
+          setContestEnded(true);
+          setEndMessage("Contest ended. Redirecting to results page.");
+        }
+      } catch {}
+    }, 5000);
+    return () => clearInterval(contestWatcherRef.current);
+  }, [contestId]);
+
+  useEffect(() => {
+    if (!contestEnded || !contestId) return;
+    const timeout = setTimeout(() => {
+      window.location.href = `/candidate/contest/${contestId}/results`;
+    }, 1200);
+    return () => clearTimeout(timeout);
+  }, [contestEnded, contestId]);
 
   const startMonitoringSession = async () => {
     try {
@@ -127,11 +164,23 @@ export default function IDEPage() {
         }
         if (msg.action === "pause") {
           setContestPaused(true);
+          setContestEnded(true);
+          setEndMessage(msg.message || "Malpractice detected. Contest ended for this attempt.");
+          pushCandidateNotification(
+            "Malpractice check failed: contest paused for your attempt",
+            contestId ? `/candidate/contest/${contestId}/results` : "/candidate/dashboard"
+          );
           toast.error(msg.message || "Contest paused due to repeated malpractice", { id: "pause-malpractice" });
         }
         if (msg.action === "disqualify") {
           setDisqualified(true);
           setContestPaused(true);
+          setContestEnded(true);
+          setEndMessage(msg.message || "Malpractice detected repeatedly. Contest ended for this attempt.");
+          pushCandidateNotification(
+            "Malpractice check failed: you were disqualified",
+            contestId ? `/candidate/contest/${contestId}/results` : "/candidate/dashboard"
+          );
           toast.error(msg.message || "You are disqualified", { id: "dq-malpractice" });
         }
       }
@@ -288,6 +337,30 @@ export default function IDEPage() {
 
       {/* Main Content Area */}
       <div className="flex flex-1 overflow-hidden">
+        {contestEnded && contestId && (
+          <div className="absolute inset-0 z-40 bg-gray-950 flex items-center justify-center px-6">
+            <div className="max-w-lg w-full bg-gray-900 border border-red-900/40 rounded-2xl p-8 text-center space-y-4">
+              <AlertTriangle className="w-12 h-12 text-red-400 mx-auto" />
+              <h2 className="text-2xl font-bold text-white">Contest Ended</h2>
+              <p className="text-sm text-gray-400">{endMessage || "Your contest session is closed."}</p>
+              <div className="flex items-center justify-center gap-3 pt-1">
+                <button
+                  onClick={() => window.location.href = `/candidate/contest/${contestId}/results`}
+                  className="px-4 py-2 bg-violet-600 hover:bg-violet-500 rounded-lg text-white text-sm font-medium"
+                >
+                  Go to Result Page
+                </button>
+                <button
+                  onClick={() => window.location.href = "/candidate/dashboard"}
+                  className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-gray-300 text-sm font-medium"
+                >
+                  Go to Dashboard
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {contestPaused && contestId && (
           <div className="absolute inset-0 z-30 bg-black/75 flex items-center justify-center">
             <div className="bg-gray-900 border border-red-900/40 rounded-2xl p-8 max-w-md text-center space-y-3">

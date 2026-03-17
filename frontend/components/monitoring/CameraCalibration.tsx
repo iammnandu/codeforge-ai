@@ -38,6 +38,17 @@ export function CameraCalibration({ sessionId, wsRef, onComplete, videoRef }: Pr
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
+  const attachPreviewStream = () => {
+    const srcStream = (videoRef?.current?.srcObject as MediaStream | null) || stream;
+    if (!srcStream || !localVideoRef.current) return;
+    const hasLiveTrack = srcStream.getVideoTracks().some((t) => t.readyState === "live");
+    if (!hasLiveTrack) return;
+    if (localVideoRef.current.srcObject !== srcStream) {
+      localVideoRef.current.srcObject = srcStream;
+    }
+    localVideoRef.current.play().catch(() => undefined);
+  };
+
   const currentCorner = step >= 0 && step < 4 ? CORNERS[step] : null;
 
   // Set up local video when stream is available
@@ -47,6 +58,14 @@ export function CameraCalibration({ sessionId, wsRef, onComplete, videoRef }: Pr
       localVideoRef.current.play().catch(err => console.error("Video play error:", err));
     }
   }, [stream]);
+
+  // Re-attach stream whenever calibration view is active
+  useEffect(() => {
+    if (step < 0 || step > 3) return;
+    attachPreviewStream();
+    const reattachTimer = setInterval(attachPreviewStream, 400);
+    return () => clearInterval(reattachTimer);
+  }, [step, stream, videoRef]);
 
   // Get stream from parent when calibration starts
   useEffect(() => {
@@ -202,7 +221,10 @@ export function CameraCalibration({ sessionId, wsRef, onComplete, videoRef }: Pr
           muted
           playsInline
           className="w-full h-full object-cover opacity-30"
-          onLoadedMetadata={() => console.log("CameraCalibration: Video metadata loaded")}
+          onLoadedMetadata={() => {
+            console.log("CameraCalibration: Video metadata loaded");
+            attachPreviewStream();
+          }}
           onPlay={() => console.log("CameraCalibration: Video playing")}
         />
       </div>
