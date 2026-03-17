@@ -3,12 +3,13 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { OrganizerShell } from "@/components/shells/OrganizerShell";
 import { api } from "@/lib/api";
-import { Plus, Code2 } from "lucide-react";
+import { Plus, Code2, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function OrganizerProblemsPage() {
   const [problems, setProblems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   useEffect(() => {
     api.get("/problems?include_private=true").then(({ data }) => { setProblems(data); setLoading(false); });
@@ -21,6 +22,21 @@ export default function OrganizerProblemsPage() {
       toast.success(nextPublic ? "Problem moved to Public practice" : "Problem set to Contest-only");
     } catch (error: any) {
       toast.error(error?.response?.data?.detail || "Failed to update visibility");
+    }
+  };
+
+  const deleteProblem = async (problemId: number, title: string) => {
+    const ok = window.confirm(`Delete problem \"${title}\"? This cannot be undone.`);
+    if (!ok) return;
+    setDeletingId(problemId);
+    try {
+      await api.delete(`/problems/${problemId}`);
+      setProblems((prev) => prev.filter((problem) => problem.id !== problemId));
+      toast.success("Problem deleted");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Failed to delete problem");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -86,6 +102,14 @@ export default function OrganizerProblemsPage() {
                     className="text-xs text-gray-400 hover:text-white px-3 py-1.5 bg-gray-800 rounded-lg transition-colors">Preview</Link>
                   <Link href={`/organizer/problems/${p.id}`}
                     className="text-xs text-gray-400 hover:text-white px-3 py-1.5 bg-gray-800 rounded-lg transition-colors">Edit</Link>
+                  <button
+                    onClick={() => deleteProblem(p.id, p.title)}
+                    disabled={deletingId === p.id}
+                    className="text-xs text-red-300 hover:text-red-200 px-3 py-1.5 bg-red-900/30 hover:bg-red-900/50 rounded-lg transition-colors flex items-center gap-1 disabled:opacity-60"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    {deletingId === p.id ? "Deleting..." : "Delete"}
+                  </button>
                 </span>
               </div>
             ))}

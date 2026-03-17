@@ -191,6 +191,10 @@ export default function ContestDetailPage() {
                 className="inline-flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white text-sm px-4 py-2.5 rounded-xl font-semibold transition-colors">
                 <Plus className="w-4 h-4" /> Add Problem
               </Link>
+              <Link href={`/organizer/problems/new?contest=${contestId}`}
+                className="inline-flex items-center gap-2 bg-violet-900/40 hover:bg-violet-900/60 text-violet-300 text-sm px-4 py-2.5 rounded-xl font-semibold transition-colors">
+                Generate with AI
+              </Link>
               <button
                 onClick={addBasicProblems}
                 className="inline-flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-gray-200 text-sm px-4 py-2.5 rounded-xl font-semibold transition-colors"

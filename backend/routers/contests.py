@@ -860,3 +860,34 @@ def publish_contest(
     contest.is_published = True
     db.commit()
     return {"message": "Contest published"}
+
+
+@router.delete("/{contest_id}", status_code=200)
+def delete_contest(
+    contest_id: int,
+    db: Session = Depends(get_db),
+    organizer: User = Depends(require_organizer),
+):
+    contest = db.query(Contest).filter(
+        Contest.id == contest_id,
+        Contest.organizer_id == organizer.id,
+    ).first()
+    if not contest:
+        raise HTTPException(status_code=404, detail="Contest not found")
+
+    session_ids = [
+        session.id
+        for session in db.query(MonitoringSession.id).filter(MonitoringSession.contest_id == contest_id).all()
+    ]
+    if session_ids:
+        db.query(MonitoringEvent).filter(MonitoringEvent.session_id.in_(session_ids)).delete(synchronize_session=False)
+    db.query(MonitoringSession).filter(MonitoringSession.contest_id == contest_id).delete(synchronize_session=False)
+
+    db.query(ContestAttempt).filter(ContestAttempt.contest_id == contest_id).delete(synchronize_session=False)
+    db.query(Submission).filter(Submission.contest_id == contest_id).delete(synchronize_session=False)
+    db.query(ContestParticipant).filter(ContestParticipant.contest_id == contest_id).delete(synchronize_session=False)
+    db.query(ContestProblem).filter(ContestProblem.contest_id == contest_id).delete(synchronize_session=False)
+
+    db.delete(contest)
+    db.commit()
+    return {"message": "Contest deleted"}

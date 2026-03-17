@@ -56,3 +56,23 @@ class ProblemDetail(ProblemOut):
     sample_input: Optional[str]
     sample_output: Optional[str]
     test_cases: List[TestCaseOut] = []
+
+
+class ProblemGenerateIn(BaseModel):
+    prompt: str
+    difficulty: str = "medium"
+
+
+class ProblemGenerateOut(BaseModel):
+    title: str
+    description: str
+    input_format: str
+    output_format: str
+    constraints: str
+    difficulty: str
+    time_limit_ms: int
+    memory_limit_mb: int
+    sample_input: str
+    sample_output: str
+    tags: List[str] = []
+    test_cases: List[TestCaseCreate] = []

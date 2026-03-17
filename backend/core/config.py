@@ -18,6 +18,8 @@ class Settings(BaseSettings):
 
     FRONTEND_URL: str = "http://localhost:3000"
     GOOGLE_CLIENT_ID: str = ""
+    OPENROUTER_API_KEY: str = ""
+    OPENROUTER_MODEL: str = "openai/gpt-4o-mini"
 
     CV_FRAME_SKIP: int = 3
     CV_SUSPICION_THRESHOLD: int = 70

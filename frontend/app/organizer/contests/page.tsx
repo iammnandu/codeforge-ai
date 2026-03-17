@@ -3,16 +3,33 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { OrganizerShell } from "@/components/shells/OrganizerShell";
 import { api } from "@/lib/api";
-import { Plus, Trophy, Eye, Calendar } from "lucide-react";
+import { Plus, Trophy, Eye, Calendar, Trash2 } from "lucide-react";
 import { format } from "date-fns";
+import toast from "react-hot-toast";
 
 export default function OrganizerContestsPage() {
   const [contests, setContests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   useEffect(() => {
     api.get("/contests").then(({ data }) => { setContests(data); setLoading(false); });
   }, []);
+
+  const deleteContest = async (contestId: number, title: string) => {
+    const ok = window.confirm(`Delete contest \"${title}\"? This cannot be undone.`);
+    if (!ok) return;
+    setDeletingId(contestId);
+    try {
+      await api.delete(`/contests/${contestId}`);
+      setContests((prev) => prev.filter((contest) => contest.id !== contestId));
+      toast.success("Contest deleted");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Failed to delete contest");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
     <OrganizerShell>
@@ -67,6 +84,14 @@ export default function OrganizerContestsPage() {
                     className="text-xs px-3 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors">
                     Manage
                   </Link>
+                  <button
+                    onClick={() => deleteContest(c.id, c.title)}
+                    disabled={deletingId === c.id}
+                    className="text-xs px-3 py-2 bg-red-900/30 hover:bg-red-900/50 disabled:opacity-60 text-red-300 rounded-lg transition-colors flex items-center gap-1"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    {deletingId === c.id ? "Deleting..." : "Delete"}
+                  </button>
                 </div>
               </div>
             ))}

@@ -13,6 +13,8 @@ export default function NewProblemPage() {
   const searchParams = useSearchParams();
   const contestId = searchParams.get("contest");
   const [loading, setLoading] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
 
   const [form, setForm] = useState({
     title: "", description: "", input_format: "", output_format: "",
@@ -34,6 +36,49 @@ export default function NewProblemPage() {
   const addTag = () => {
     if (form.tagInput.trim() && !form.tags.includes(form.tagInput.trim())) {
       setForm((f) => ({ ...f, tags: [...f.tags, f.tagInput.trim()], tagInput: "" }));
+    }
+  };
+
+  const generateWithAI = async () => {
+    if (!aiPrompt.trim()) {
+      toast.error("Enter prompt for AI generation");
+      return;
+    }
+    setAiLoading(true);
+    try {
+      const { data } = await api.post("/problems/generate-ai", {
+        prompt: aiPrompt.trim(),
+        difficulty: form.difficulty,
+      });
+
+      setForm((prev) => ({
+        ...prev,
+        title: data.title || prev.title,
+        description: data.description || prev.description,
+        input_format: data.input_format || prev.input_format,
+        output_format: data.output_format || prev.output_format,
+        constraints: data.constraints || prev.constraints,
+        difficulty: data.difficulty || prev.difficulty,
+        time_limit_ms: data.time_limit_ms || prev.time_limit_ms,
+        memory_limit_mb: data.memory_limit_mb || prev.memory_limit_mb,
+        sample_input: data.sample_input || prev.sample_input,
+        sample_output: data.sample_output || prev.sample_output,
+        tags: Array.isArray(data.tags) ? data.tags : prev.tags,
+      }));
+      if (Array.isArray(data.test_cases) && data.test_cases.length > 0) {
+        setTestCases(
+          data.test_cases.map((testCase: any) => ({
+            input: testCase.input || "",
+            expected: testCase.expected || "",
+            is_sample: !!testCase.is_sample,
+          }))
+        );
+      }
+      toast.success("Problem generated with AI");
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || "AI generation failed");
+    } finally {
+      setAiLoading(false);
     }
   };
 
@@ -79,6 +124,28 @@ export default function NewProblemPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          <div className={cardClass}>
+            <h2 className="font-semibold text-white">Generate with AI</h2>
+            <div>
+              <label className={labelClass}>Prompt</label>
+              <textarea
+                rows={3}
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                className={inputClass}
+                placeholder="e.g. Create a medium array + hashing problem about finding longest balanced subarray"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={generateWithAI}
+              disabled={aiLoading}
+              className="bg-violet-600 hover:bg-violet-500 disabled:opacity-60 text-white font-semibold px-4 py-2.5 rounded-xl transition-colors text-sm"
+            >
+              {aiLoading ? "Generating..." : "Generate with AI"}
+            </button>
+          </div>
+
           {/* Basic Info */}
           <div className={cardClass}>
             <h2 className="font-semibold text-white">Problem Info</h2>
