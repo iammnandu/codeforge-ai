@@ -17,19 +17,26 @@ export default function ContestEntryPage() {
 
   const [contest, setContest] = useState<any>(null);
   const [phase, setPhase] = useState<Phase>("loading");
+  const [entryStatus, setEntryStatus] = useState<any>(null);
   const [sessionId, setSessionId] = useState<number>(0);
   const videoRef = useRef<HTMLVideoElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
-    api.get(`/contests/${contestId}`).then(({ data }) => {
-      setContest(data);
-      const ended = data?.end_time ? new Date(data.end_time).getTime() <= Date.now() : false;
-      if (ended) {
-        router.replace(`/candidate/contest/${contestId}/results`);
+    Promise.all([
+      api.get(`/contests/${contestId}`),
+      api.get(`/contests/${contestId}/entry-status`).catch(() => ({ data: null })),
+    ]).then(([contestRes, statusRes]) => {
+      setContest(contestRes.data);
+      const status = statusRes?.data;
+      setEntryStatus(status);
+
+      if (status && status.can_enter === false) {
+        setPhase("camera");
         return;
       }
+
       setPhase("info");
     });
     return () => {
@@ -39,8 +46,10 @@ export default function ContestEntryPage() {
   }, [contestId]);
 
   const startCamera = async () => {
-    if (contest?.end_time && new Date(contest.end_time).getTime() <= Date.now()) {
-      router.replace(`/candidate/contest/${contestId}/results`);
+    if (entryStatus && entryStatus.can_enter === false) {
+      if (entryStatus.contest_ended) {
+        router.replace(`/candidate/contest/${contestId}/results`);
+      }
       return;
     }
     setPhase("camera");
@@ -133,6 +142,37 @@ export default function ContestEntryPage() {
                 {contest.proctoring_enabled ? "Enable Camera & Continue" : "Enter Contest"}
                 <ArrowRight className="w-4 h-4" />
               </button>
+            </div>
+          </div>
+        )}
+
+        {phase === "camera" && entryStatus && entryStatus.can_enter === false && (
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 text-center space-y-5">
+            <div className="w-14 h-14 bg-yellow-900/30 rounded-full flex items-center justify-center mx-auto">
+              <Clock className="w-7 h-7 text-yellow-400" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-white mb-2">Already Attended</h2>
+              <p className="text-sm text-gray-400">
+                {entryStatus.message || "You already attended this contest. Wait for contest end to view results."}
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-3">
+              {entryStatus.contest_ended ? (
+                <button
+                  onClick={() => router.push(`/candidate/contest/${contestId}/results`)}
+                  className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-sm font-medium"
+                >
+                  View Results
+                </button>
+              ) : (
+                <button
+                  onClick={() => router.push("/candidate/dashboard")}
+                  className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg text-sm font-medium"
+                >
+                  Go to Dashboard
+                </button>
+              )}
             </div>
           </div>
         )}

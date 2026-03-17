@@ -182,6 +182,59 @@ def get_contest(
     return contest
 
 
+@router.get("/{contest_id}/entry-status", status_code=200)
+def candidate_entry_status(
+    contest_id: int,
+    db: Session = Depends(get_db),
+    candidate: User = Depends(require_candidate),
+):
+    contest = db.query(Contest).filter(Contest.id == contest_id).first()
+    if not contest:
+        raise HTTPException(status_code=404, detail="Contest not found")
+
+    participant = db.query(ContestParticipant).filter_by(
+        contest_id=contest_id,
+        user_id=candidate.id,
+    ).first()
+    if not participant:
+        raise HTTPException(status_code=403, detail="You are not a participant of this contest")
+
+    attempt = db.query(ContestAttempt).filter_by(contest_id=contest_id, user_id=candidate.id).first()
+    already_submitted = bool(attempt and attempt.is_submitted)
+    contest_ended = _utc_now_naive() >= _as_naive(contest.end_time)
+
+    malpractice_failed = db.query(MonitoringSession).filter(
+        MonitoringSession.contest_id == contest_id,
+        MonitoringSession.user_id == candidate.id,
+        MonitoringSession.is_flagged == True,
+    ).first() is not None
+
+    can_enter = not contest_ended and not already_submitted and not malpractice_failed
+    if can_enter:
+        return {
+            "can_enter": True,
+            "contest_ended": False,
+            "already_submitted": False,
+            "malpractice_failed": False,
+            "message": None,
+        }
+
+    if contest_ended:
+        message = "Contest already ended. Results are available."
+    elif malpractice_failed:
+        message = "Your contest attempt was ended due to malpractice. Wait for contest end to view results."
+    else:
+        message = "You already attended this contest. Wait for contest end to view results."
+
+    return {
+        "can_enter": False,
+        "contest_ended": contest_ended,
+        "already_submitted": already_submitted,
+        "malpractice_failed": malpractice_failed,
+        "message": message,
+    }
+
+
 @router.post("/join", status_code=200)
 def join_contest(
     payload: JoinContest,

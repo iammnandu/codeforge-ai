@@ -11,6 +11,8 @@ import importlib.util
 
 from core.database import get_db, SessionLocal
 from core.dependencies import get_current_user, require_organizer
+from models.contest import Contest
+from models.contest_attempt import ContestAttempt
 from models.monitoring import MonitoringSession, MonitoringEvent
 from models.user import User
 from schemas.monitoring import MonitoringEventOut, SessionOut
@@ -141,6 +143,26 @@ def start_monitoring_session(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    contest = db.query(Contest).filter(Contest.id == contest_id).first()
+    if not contest:
+        raise HTTPException(status_code=404, detail="Contest not found")
+
+    end_time = contest.end_time.replace(tzinfo=None) if contest.end_time and contest.end_time.tzinfo else contest.end_time
+    if end_time and datetime.utcnow() >= end_time:
+        raise HTTPException(status_code=403, detail="Contest has already ended")
+
+    attempt = db.query(ContestAttempt).filter_by(contest_id=contest_id, user_id=current_user.id).first()
+    if attempt and attempt.is_submitted:
+        raise HTTPException(status_code=403, detail="Contest already submitted. Wait for results.")
+
+    malpractice_failed = db.query(MonitoringSession).filter(
+        MonitoringSession.contest_id == contest_id,
+        MonitoringSession.user_id == current_user.id,
+        MonitoringSession.is_flagged == True,
+    ).first()
+    if malpractice_failed:
+        raise HTTPException(status_code=403, detail="Contest attempt ended due to malpractice. Wait for results.")
+
     existing = db.query(MonitoringSession).filter_by(
         user_id=current_user.id, contest_id=contest_id, ended_at=None
     ).first()
